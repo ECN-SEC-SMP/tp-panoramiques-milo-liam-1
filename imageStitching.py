@@ -10,6 +10,12 @@ unset LD_LIBRARY_PATH
 unset GIO_MODULE_DIR
 
 jsp trop
+
+
+
+python3 imageStitching.py -k SIFT -n 500 -m NORM_L2
+
+
 """
 
 import cv2 as cv
@@ -141,6 +147,29 @@ def match_descriptors(norm_type_str, desc1, desc2, alpha=4.0):
     return matches, best_matches
 
 
+def homo(best_matches, kp1, kp2):
+
+    src_pts = np.float32([kp2[m.trainIdx].pt for m in best_matches]).reshape(-1, 1, 2)
+
+    dst_pts = np.float32([kp1[m.queryIdx].pt for m in best_matches]).reshape(-1, 1, 2)
+
+    H, mask = cv.findHomography(src_pts, dst_pts, cv.RANSAC, 5.0)
+
+    return H, mask
+
+
+def stitch_images(img1, img2, H):
+    h1, w1 = img1.shape[:2]
+    h2, w2 = img2.shape[:2]
+
+    panoramique_width = w1 + w2
+    panoramique_height = max(h1, h2)
+    panoramique = cv.warpPerspective(img2, H, (panoramique_width, panoramique_height))
+    panoramique[0:h1, 0:w1] = img1
+
+    return panoramique
+
+
 def main():
 
     parser = parse_command_line_arguments()
@@ -152,12 +181,12 @@ def main():
     print("load image 2")
     img2, gray2 = load_gray_image(args["image2"])
 
-    # displays the 2 input images
+    """# displays the 2 input images
     if img1 is not None:
         display_image(img1, "Image 1")
     if img2 is not None:
         display_image(img2, "Image 2")
-    print("debug1")
+    print("debug1")"""
     # Apply the choosen feature detector
     print(args["kp"] + " detector")
 
@@ -166,14 +195,13 @@ def main():
         kp2 = feature_detector(args["kp"], gray2, args["nbKp"])
 
     # Display the keyPoint on the input images
-    img_kp1 = cv.drawKeypoints(gray1, kp1, img1)
-    if img2 is not None:
-        img_kp2 = cv.drawKeypoints(gray2, kp2, img2)
+    img_kp1 = cv.drawKeypoints(gray1, kp1, img1.copy())
+    img_kp2 = cv.drawKeypoints(gray2, kp2, img2.copy())
 
+    """
     display_image(img_kp1, "Image 1 " + args["kp"])
-    if img2 is not None:
-        display_image(img_kp2, "Image 2 " + args["kp"])
-
+    display_image(img_kp2, "Image 2 " + args["kp"])
+    """
     # code to complete (using functions):
     # - to extract feature and compute descriptor with ORB and SIFT
 
@@ -217,8 +245,18 @@ def main():
     display_image(img_matches, "Meilleurs matchs")
 
     # - to calculate and apply homography
+    H, mask = homo(best_matches, kp1, kp2)
 
-    # - to stich and display resulting image
+    if H is not None:
+        print("\nHomographie H :")
+        print(H)
+        print("nb inliers (RANSAC) :", int(mask.sum()))
+
+        # - to stich and display resulting image
+
+        panorama = stitch_images(img1, img2, H)
+        display_image(panorama, "Panorama")
+    
 
     # waiting for user action
     key = 0
