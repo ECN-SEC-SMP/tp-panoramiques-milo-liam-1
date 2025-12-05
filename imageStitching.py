@@ -110,7 +110,6 @@ def feature_detector(type, gray, nb):
 
 
 def feature_extractor(type, img, kp):
-
     sift_detector = cv.SIFT_create()
     keypoints, descriptors = sift_detector.compute(img, kp)
     return keypoints, descriptors
@@ -149,13 +148,9 @@ def match_descriptors(norm_type_str, desc1, desc2, alpha=4.0):
 
 
 def homo(best_matches, kp1, kp2):
-
     src_pts = np.float32([kp2[m.trainIdx].pt for m in best_matches]).reshape(-1, 1, 2)
-
     dst_pts = np.float32([kp1[m.queryIdx].pt for m in best_matches]).reshape(-1, 1, 2)
-
     H, mask = cv.findHomography(src_pts, dst_pts, cv.RANSAC, 5.0)
-
     return H, mask
 
 
@@ -240,10 +235,7 @@ def main():
     print("\nmatching :")
     print("nb matches totaux :", len(matches))
     print("nb meilleurs matches :", len(best_matches))
-    print(
-        "distance du meilleur match :",
-        matches[0].distance if len(matches) > 0 else "NA",
-    )
+
 
     img_matches = cv.drawMatches(
         img1,
