@@ -9,9 +9,8 @@ unset GTK_PATH
 unset LD_LIBRARY_PATH
 unset GIO_MODULE_DIR
 
-jsp trop 
+jsp trop
 """
-
 
 import cv2 as cv
 import sys
@@ -23,16 +22,43 @@ ESC_KEY = 27
 Q_KEY = 113
 
 
-def parse_command_line_arguments():# Parse command line arguments
+def parse_command_line_arguments():  # Parse command line arguments
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-k", "--kp", default="SIFT", help="key point (or corner) detector: GFTT ORB SIFT ")
-    parser.add_argument("-n", "--nbKp", default=None, type=int, help="Number of key point required (if configurable) ")
-    parser.add_argument("-d", "--descriptor", default=True, type=bool, help="compute descriptor associated with detector (if available)")
-    parser.add_argument("-m", "--matching", default="NORM_L1", help="Brute Force norm: NORM_L1, NORM_L2, NORM_HAMMING, NORM_HAMMING2")
-    parser.add_argument("-i1", "--image1", default="./IMG_1_reduced.jpg", help="path to image1")
-    parser.add_argument("-i2", "--image2", default="./IMG_2_reduced.jpg", help="path to image2")
+    parser.add_argument(
+        "-k",
+        "--kp",
+        default="SIFT",
+        help="key point (or corner) detector: GFTT ORB SIFT ",
+    )
+    parser.add_argument(
+        "-n",
+        "--nbKp",
+        default=None,
+        type=int,
+        help="Number of key point required (if configurable) ",
+    )
+    parser.add_argument(
+        "-d",
+        "--descriptor",
+        default=True,
+        type=bool,
+        help="compute descriptor associated with detector (if available)",
+    )
+    parser.add_argument(
+        "-m",
+        "--matching",
+        default="NORM_L1",
+        help="Brute Force norm: NORM_L1, NORM_L2, NORM_HAMMING, NORM_HAMMING2",
+    )
+    parser.add_argument(
+        "-i1", "--image1", default="./IMG_1_reduced.jpg", help="path to image1"
+    )
+    parser.add_argument(
+        "-i2", "--image2", default="./IMG_2_reduced.jpg", help="path to image2"
+    )
     # other argument may need to be added
     return parser
+
 
 def test_load_image(img):
     if img is None or img.size == 0 or (img.shape[0] == 0) or (img.shape[1] == 0):
@@ -40,46 +66,80 @@ def test_load_image(img):
         print("Exiting now...")
         exit(1)
 
+
 def load_gray_image(path):
-    if(path != None):
+    if path != None:
         img = cv.imread(path)
         test_load_image(img)
-        gray= cv.cvtColor(img,cv.COLOR_BGR2GRAY)
+        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     else:
         img = None
         gray = None
     return img, gray
 
+
 def display_image(img, image_window_name):
     cv.namedWindow(image_window_name)
     cv.imshow(image_window_name, img)
 
+
 def feature_detector(type, gray, nb):
-    if gray is not None :
-        match type :
+    if gray is not None:
+        match type:
             case "GFTT":
-                 # TODO
+                # TODO
                 print("not implemented yet")
-                sys.exit(1)    
+                sys.exit(1)
             case "ORB":
                 # TODO
                 print("not implemented yet")
                 sys.exit(1)
             case _:
                 sift = cv.SIFT_create(nb)
-                kp=sift.detect(gray, None)
+                kp = sift.detect(gray, None)
     else:
-        kp =  None
+        kp = None
     return kp
 
+
 def feature_extractor(type, img, kp):
-    
+
     sift_detector = cv.SIFT_create()
     keypoints, descriptors = sift_detector.compute(img, kp)
     return keypoints, descriptors
 
 
-# other functions will need to be defined
+def match_descriptors(norm_type_str, desc1, desc2, alpha=4.0):
+    if desc1 is None or desc2 is None:
+        return [], []
+
+    if norm_type_str == "NORM_L1":
+        norm_type = cv.NORM_L1
+    elif norm_type_str == "NORM_L2":
+        norm_type = cv.NORM_L2
+    elif norm_type_str == "NORM_HAMMING":
+        norm_type = cv.NORM_HAMMING
+    elif norm_type_str == "NORM_HAMMING2":
+        norm_type = cv.NORM_HAMMING2
+    else:
+        norm_type = cv.NORM_L2
+
+    bf = cv.BFMatcher(norm_type, crossCheck=False)
+
+    matches = bf.match(desc1, desc2)
+
+    if len(matches) == 0:
+        return [], []
+
+    matches = sorted(matches, key=lambda m: m.distance)
+
+    min_dist = matches[0].distance
+    seuil = alpha * min_dist
+
+    best_matches = [m for m in matches if m.distance < seuil]
+
+    return matches, best_matches
+
 
 def main():
 
@@ -93,21 +153,29 @@ def main():
     img2, gray2 = load_gray_image(args["image2"])
 
     # displays the 2 input images
-    if img1 is not None : display_image(img1, "Image 1")
-    if img2 is not None : display_image(img2, "Image 2")
+    if img1 is not None:
+        display_image(img1, "Image 1")
+    if img2 is not None:
+        display_image(img2, "Image 2")
     print("debug1")
     # Apply the choosen feature detector
-    print(args["kp"]+" detector")
-    
+    print(args["kp"] + " detector")
+
     kp1 = feature_detector(args["kp"], gray1, args["nbKp"])
-    if img2 is not None: kp2 = feature_detector(args["kp"], gray2, args["nbKp"])
+    if img2 is not None:
+        kp2 = feature_detector(args["kp"], gray2, args["nbKp"])
 
     # Display the keyPoint on the input images
-    img_kp1=cv.drawKeypoints(gray1,kp1,img1)
-    if img2 is not None: img_kp2=cv.drawKeypoints(gray2,kp2,img2)
-    
-    display_image(img_kp1, "Image 1 "+args["kp"])
-    if img2 is not None : display_image(img_kp2, "Image 2 "+args["kp"])
+    img_kp1 = cv.drawKeypoints(gray1, kp1, img1)
+    if img2 is not None:
+        img_kp2 = cv.drawKeypoints(gray2, kp2, img2)
+
+    display_image(img_kp1, "Image 1 " + args["kp"])
+    if img2 is not None:
+        display_image(img_kp2, "Image 2 " + args["kp"])
+
+    # code to complete (using functions):
+    # - to extract feature and compute descriptor with ORB and SIFT
 
     kp1, desc1 = feature_extractor(args["kp"], gray1, kp1)
     kp2, desc2 = feature_extractor(args["kp"], gray2, kp2)
@@ -117,25 +185,49 @@ def main():
     print("\nimage1")
     print("nb kp:", len(kp1))
     print("1er kp:", kp1[0].pt)
-    print("1er desc:", desc1[0][:8])   # 8 valeurs, brut
+    print("1er desc:", desc1[0][:8])  # 8 valeurs, brut
 
     print("\nimage2")
     print("nb kp:", len(kp2))
     print("1er kp:", kp2[0].pt)
-    print("1er desc:", desc2[0][:8])   # 8 valeurs, brut
-    # code to complete (using functions):
-    # - to extract feature and compute descriptor with ORB and SIFT 
+    print("1er desc:", desc2[0][:8])  # 8 valeurs, brut
+
     # - to calculate brute force matching between descriptor using different norms
-    # - to calculate and apply homography 
+
+    matches, best_matches = match_descriptors(args["matching"], desc1, desc2, alpha=4.0)
+
+    print("\nmatching :")
+    print("nb matches totaux :", len(matches))
+    print("nb meilleurs matches :", len(best_matches))
+    print(
+        "distance du meilleur match :",
+        matches[0].distance if len(matches) > 0 else "NA",
+    )
+
+    img_matches = cv.drawMatches(
+        img1,
+        kp1,
+        img2,
+        kp2,
+        best_matches,
+        None,
+        flags=cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS,
+    )
+
+    display_image(img_matches, "Meilleurs matchs")
+
+    # - to calculate and apply homography
+
     # - to stich and display resulting image
 
     # waiting for user action
     key = 0
-    while key != ESC_KEY and key!= Q_KEY :
+    while key != ESC_KEY and key != Q_KEY:
         key = cv.waitKey(1)
 
     # Destroying all OpenCV windows
     cv.destroyAllWindows()
+
 
 if __name__ == "__main__":
     main()
