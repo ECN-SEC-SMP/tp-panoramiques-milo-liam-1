@@ -90,28 +90,31 @@ def display_image(img, image_window_name):
     cv.imshow(image_window_name, img)
 
 
-def feature_detector(type, gray, nb):
-    if gray is not None:
-        match type:
-            case "GFTT":
-                # TODO
-                print("not implemented yet")
-                sys.exit(1)
-            case "ORB":
-                # TODO
-                print("not implemented yet")
-                sys.exit(1)
-            case _:
-                sift = cv.SIFT_create(nb)
-                kp = sift.detect(gray, None)
-    else:
-        kp = None
-    return kp
+def feature_detector(detector_type, gray, nb):
+    if gray is None:
+        return None
+    if nb is None:
+        nb = 500
+    t = detector_type.upper()
+    if t == "ORB":
+        orb = cv.ORB_create(nfeatures=nb)
+        keypoints = orb.detect(gray, None)
+    else:  # SIFT par défaut
+        sift = cv.SIFT_create(nb)
+        keypoints = sift.detect(gray, None)
+
+    return keypoints
 
 
-def feature_extractor(type, img, kp):
-    sift_detector = cv.SIFT_create()
-    keypoints, descriptors = sift_detector.compute(img, kp)
+def feature_extractor(detector_type, gray_image, keypoints):
+    t = detector_type.upper()
+
+    if t == "ORB":
+        extractor = cv.ORB_create()
+    else: 
+        extractor = cv.SIFT_create()
+
+    keypoints, descriptors = extractor.compute(gray_image, keypoints)
     return keypoints, descriptors
 
 
