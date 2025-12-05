@@ -14,6 +14,7 @@ jsp trop
 
 
 python3 imageStitching.py -k SIFT -n 500 -m NORM_L2
+python3 imageStitching.py -k SIFT -n 500 -m NORM_L2 -i1 SEC1c2.jpg -i2 SEC2c2.jpg
 
 
 """
@@ -170,6 +171,18 @@ def stitch_images(img1, img2, H):
     return panoramique
 
 
+def display_resized(img, window_name, max_width=1200, max_height=800):
+    h, w = img.shape[:2]
+
+    scale = min(max_width / w, max_height / h, 1.0)  # 1.0 = jamais agrandir
+
+    new_size = (int(w * scale), int(h * scale))
+    resized = cv.resize(img, new_size, interpolation=cv.INTER_AREA)
+
+    cv.namedWindow(window_name, cv.WINDOW_NORMAL)
+    cv.imshow(window_name, resized)
+
+
 def main():
 
     parser = parse_command_line_arguments()
@@ -242,7 +255,9 @@ def main():
         flags=cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS,
     )
 
-    display_image(img_matches, "Meilleurs matchs")
+    #display_image(img_matches, "Meilleurs matchs")
+    display_resized(img_matches, "Meilleurs matchs")
+    
 
     # - to calculate and apply homography
     H, mask = homo(best_matches, kp1, kp2)
@@ -255,7 +270,8 @@ def main():
         # - to stich and display resulting image
 
         panorama = stitch_images(img1, img2, H)
-        display_image(panorama, "Panorama")
+        #display_image(panorama, "Panorama")
+        display_resized(panorama, "Panorama")
     
 
     # waiting for user action
